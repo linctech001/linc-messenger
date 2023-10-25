@@ -1,5 +1,5 @@
 {
-  "name": "munafio/chatify",
+  "name": "linctech/linc-messenger",
   "description": "A package for Laravel PHP Framework to add a complete real-time chat system.",
   "type": "library",
   "keywords": [
