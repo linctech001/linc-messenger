@@ -6,14 +6,17 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Response;
+
 use App\Models\User;
 use App\Models\ChMessage as Message;
 use App\Models\ChFavorite as Favorite;
-use Chatify\Facades\ChatifyMessenger as Chatify;
+
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Request as FacadesRequest;
 use Illuminate\Support\Str;
+
+use Chatify\Facades\ChatifyMessenger as Chatify;
+
 class MessagesController extends Controller
 {
     protected $perPage = 30;
@@ -82,7 +85,17 @@ class MessagesController extends Controller
     {
         $filePath = config('chatify.attachments.folder') . '/' . $fileName;
         if (Chatify::storage()->exists($filePath)) {
-            return Chatify::storage()->download($filePath);
+            // return Chatify::storage()->download($filePath);
+            $file = Chatify::storage()->get($filePath);
+            $mimeType = Chatify::storage()->mimeType($filePath);
+
+            $fileName = pathinfo($filePath)["basename"];
+            $headers = [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"'
+            ];
+
+            return response()->make($file, 200, $headers);
         }
         return abort(404, "Sorry, File does not exist in our server or may have been deleted!");
     }
