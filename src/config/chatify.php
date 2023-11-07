@@ -82,7 +82,7 @@ return [
     |-------------------------------------
     */
     'attachments' => [
-        'folder' => 'attachments',
+        'folder' => 'attachments-messenger',
         'download_route_name' => 'attachments.download',
         'allowed_images' => (array) ['png','jpg','jpeg','gif'],
         'allowed_files' => (array) ['zip','rar','txt'],
