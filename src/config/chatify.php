@@ -14,7 +14,7 @@ return [
     | files and derived images by default.
     |-------------------------------------
     */
-    'storage_disk_name' => env('CHATIFY_STORAGE_DISK', 's3'),
+    'storage_disk_name' => env('CHATIFY_STORAGE_DISK', 'messenger'),
 
     /*
     |-------------------------------------
@@ -82,7 +82,7 @@ return [
     |-------------------------------------
     */
     'attachments' => [
-        'folder' => 'attachments-messenger',
+        'folder' => '',
         'download_route_name' => 'attachments.download',
         'allowed_images' => (array) ['png','jpg','jpeg','gif'],
         'allowed_files' => (array) ['zip','rar','txt'],
