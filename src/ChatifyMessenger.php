@@ -274,7 +274,7 @@ class ChatifyMessenger
      */
     public function getLastMessageQuery($user_id)
     {
-        return $this->fetchMessagesQuery($user_id)->latest()->first();
+        return $this->fetchMessagesQuery($user_id)->where('is_from_translate', '!=', '1')->latest()->first();
     }
 
     /**

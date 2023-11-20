@@ -217,6 +217,7 @@ class MessagesController extends Controller
             ->orWhere('ch_messages.to_id', Auth::user()->id);
         })
         ->where('users.id','!=',Auth::user()->id)
+        ->where('ch_messages.is_from_translate', '!=', '1')
         ->select('users.*',DB::raw('MAX(ch_messages.created_at) max_created_at'))
         ->orderBy('max_created_at', 'desc')
         ->groupBy('users.id')
