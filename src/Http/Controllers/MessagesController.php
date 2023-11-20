@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Response;
 use App\Models\User;
 use App\Models\ChMessage as Message;
 use App\Models\ChFavorite as Favorite;
+use App\Services\OpenAIService;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,44 @@ use Chatify\Facades\ChatifyMessenger as Chatify;
 class MessagesController extends Controller
 {
     protected $perPage = 30;
+
+    public function messageTranslate(Request $request): JsonResponse
+    {
+        $targetLanguage = $request->input('targetLanguage', false);
+        $fromMessageId = $request->input('id', false);
+        $messages = Message::where('id', $fromMessageId)->orWhere('translate_from', $fromMessageId)->get();
+    
+        foreach($messages as $message) {
+            if($message->is_from_translate != 1) {
+                $needTranslateMessage = $message->body;
+            }
+            if($message->target_language == $targetLanguage) {
+                return response()->json(['text' => $message->body, 'language' => $targetLanguage]);
+            }
+        }
+
+        if(!$needTranslateMessage || !$targetLanguage || !$fromMessageId) {
+            return abort(400);
+        }
+
+        $openAIService = new OpenAIService();
+        $text = $openAIService->translateText($needTranslateMessage, $targetLanguage);
+
+        try {
+            Chatify::newTranslateMessage([
+                'from_id' => $message->from_id,
+                'to_id' => $message->to_id,
+                'translate_from' => $fromMessageId,
+                'target_language' => $targetLanguage,
+                'body' => htmlentities(trim($text), ENT_QUOTES, 'UTF-8'),
+            ]);
+        } catch (\Exception $e) {
+            echo $e->getMessage();
+            return abort(500);
+        }
+    
+        return response()->json(['text' => $text, 'language' => $targetLanguage]);
+    }
 
     /**
      * Authenticate the connection for pusher
@@ -43,7 +82,7 @@ class MessagesController extends Controller
      * @param int $id
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
      */
-    public function index( $id = null)
+    public function index($id = null)
     {
         $messenger_color = Auth::user()->messenger_color;
         return view('Chatify::pages.app', [
@@ -64,7 +103,7 @@ class MessagesController extends Controller
     {
         $favorite = Chatify::inFavorite($request['id']);
         $fetch = User::where('id', $request['id'])->first();
-        if($fetch){
+        if ($fetch) {
             $userAvatar = Chatify::getUserWithAvatar($fetch)->avatar;
         }
         return Response::json([
@@ -131,7 +170,7 @@ class MessagesController extends Controller
                     $attachment_title = $file->getClientOriginalName();
                     // upload attachment and store the new name
                     $attachment = Str::uuid() . "." . $file->extension();
-                    $file->storePubliclyAs(config('chatify.attachments.folder'), $attachment, config('chatify.storage_disk_name'));
+                    $file->storeAs(config('chatify.attachments.folder'), $attachment, config('chatify.storage_disk_name'));
                 } else {
                     $error->status = 1;
                     $error->message = "File extension not allowed!";
@@ -154,7 +193,7 @@ class MessagesController extends Controller
             ]);
             $messageData = Chatify::parseMessage($message);
             if (Auth::user()->id != $request['id']) {
-                Chatify::push("private-chatify.".$request['id'], 'messaging', [
+                Chatify::push("private-chatify." . $request['id'], 'messaging', [
                     'from_id' => Auth::user()->id,
                     'to_id' => $request['id'],
                     'message' => Chatify::messageCard($messageData, true)
@@ -192,7 +231,7 @@ class MessagesController extends Controller
 
         // if there is no messages yet.
         if ($totalMessages < 1) {
-            $response['messages'] ='<p class="message-hint center-el"><span>Say \'hi\' and start messaging</span></p>';
+            $response['messages'] = '<p class="message-hint center-el"><span>Say \'hi\' and start messaging</span></p>';
             return Response::json($response);
         }
         if (count($messages->items()) < 1) {
@@ -200,9 +239,23 @@ class MessagesController extends Controller
             return Response::json($response);
         }
         $allMessages = null;
-        foreach ($messages->reverse() as $message) {
+
+        $messagesWithTranslate = [];
+        foreach($messages->reverse()->toArray() as $message) {
+            if($message['is_from_translate'] != 1) {
+                $messagesWithTranslate[$message['id']] = $message;
+                continue;
+            } else {
+                $messagesWithTranslate[$message['translate_from']]['translates'][] = [
+                    'body' => $message['body'],
+                    'target_language' => $message['target_language'],
+                ];
+            }
+        }
+
+        foreach ($messagesWithTranslate as $message) {
             $allMessages .= Chatify::messageCard(
-                Chatify::parseMessage($message)
+                Chatify::parseMessageWithTranslate($message)
             );
         }
         $response['messages'] = $allMessages;
@@ -238,15 +291,15 @@ class MessagesController extends Controller
             $join->on('ch_messages.from_id', '=', 'users.id')
                 ->orOn('ch_messages.to_id', '=', 'users.id');
         })
-        ->where(function ($q) {
-            $q->where('ch_messages.from_id', Auth::user()->id)
-            ->orWhere('ch_messages.to_id', Auth::user()->id);
-        })
-        ->where('users.id','!=',Auth::user()->id)
-        ->select('users.*',DB::raw('MAX(ch_messages.created_at) max_created_at'))
-        ->orderBy('max_created_at', 'desc')
-        ->groupBy('users.id')
-        ->paginate($request->per_page ?? $this->perPage);
+            ->where(function ($q) {
+                $q->where('ch_messages.from_id', Auth::user()->id)
+                    ->orWhere('ch_messages.to_id', Auth::user()->id);
+            })
+            ->where('users.id', '!=', Auth::user()->id)
+            ->select('users.*', DB::raw('MAX(ch_messages.created_at) max_created_at'))
+            ->orderBy('max_created_at', 'desc')
+            ->groupBy('users.id')
+            ->paginate($request->per_page ?? $this->perPage);
 
         $usersList = $users->items();
 
@@ -276,7 +329,7 @@ class MessagesController extends Controller
     {
         // Get user data
         $user = User::where('id', $request['user_id'])->first();
-        if(!$user){
+        if (!$user) {
             return Response::json([
                 'message' => 'User not found!',
             ], 401);
@@ -344,16 +397,16 @@ class MessagesController extends Controller
     {
         $getRecords = null;
         $input = trim(filter_var($request['input']));
-        $records = User::where('id','!=',Auth::user()->id)
-                    ->where('name', 'LIKE', "%{$input}%")
-                    ->paginate($request->per_page ?? $this->perPage);
+        $records = User::where('id', '!=', Auth::user()->id)
+            ->where('name', 'LIKE', "%{$input}%")
+            ->paginate($request->per_page ?? $this->perPage);
         foreach ($records->items() as $record) {
             $getRecords .= view('Chatify::layouts.listItem', [
                 'get' => 'search_item',
                 'user' => Chatify::getUserWithAvatar($record),
             ])->render();
         }
-        if($records->total() < 1){
+        if ($records->total() < 1) {
             $getRecords = '<p class="message-hint center-el"><span>Nothing to show.</span></p>';
         }
         // send the response

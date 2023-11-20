@@ -169,6 +169,40 @@ class ChatifyMessenger
         ];
     }
 
+    public function parseMessageWithTranslate(array $message): Array {
+        $msg = (object) $message;
+
+        $attachment = null;
+        $attachment_type = null;
+        $attachment_title = null;
+
+        if (isset($msg->attachment)) {
+            $attachmentOBJ = json_decode($msg->attachment);
+            $attachment = $attachmentOBJ->new_name;
+            $attachment_title = htmlentities(trim($attachmentOBJ->old_name), ENT_QUOTES, 'UTF-8');
+            $ext = pathinfo($attachment, PATHINFO_EXTENSION);
+            $attachment_type = in_array($ext, $this->getAllowedImages()) ? 'image' : 'file';
+        }
+
+        $createAt = \Carbon\Carbon::parse($msg->created_at);
+        return [
+            'id' => $msg->id,
+            'from_id' => $msg->from_id,
+            'to_id' => $msg->to_id,
+            'message' => $msg->body,
+            'attachment' => (object) [
+                'file' => $attachment,
+                'title' => $attachment_title,
+                'type' => $attachment_type
+            ],
+            'translates' => $msg->translates ?? [],
+            'timeAgo' => $createAt->diffForHumans(),
+            'created_at' => $createAt->toIso8601String(),
+            'isSender' => ($msg->from_id == Auth::user()->id),
+            'seen' => $msg->seen,
+        ];
+    }
+
     /**
      * Return a message card with the given data.
      *
@@ -398,14 +432,16 @@ class ChatifyMessenger
     public function deleteMessage($id)
     {
         try {
-            $msg = Message::where('from_id', auth()->id())->where('id', $id)->firstOrFail();
-            if (isset($msg->attachment)) {
-                $path = config('chatify.attachments.folder') . '/' . json_decode($msg->attachment)->new_name;
-                if (self::storage()->exists($path)) {
-                    self::storage()->delete($path);
-                }
-            }
-            $msg->delete();
+            $msg = Message::where('from_id', auth()->id())->where(function($query) use ($id) {
+                $query->where('id', $id)->orWhere('translate_from', $id);
+            })->delete();
+            // 暂时保留文件
+            // if (isset($msg->attachment)) {
+            //     $path = config('chatify.attachments.folder') . '/' . json_decode($msg->attachment)->new_name;
+            //     if (self::storage()->exists($path)) {
+            //         self::storage()->delete($path);
+            //     }
+            // }
             return 1;
         } catch (Exception $e) {
             throw new Exception($e->getMessage());
@@ -440,6 +476,22 @@ class ChatifyMessenger
      */
     public function getAttachmentUrl($attachment_name)
     {
-        return self::storage()->url(config('chatify.attachments.folder') . '/' . $attachment_name);
+        // return self::storage()->url(config('chatify.attachments.folder') . '/' . $attachment_name);
+        return self::storage()->temporaryUrl($attachment_name, now()->addMinutes(5));
+    }
+
+    public function newTranslateMessage($data)
+    {
+        $message = new Message();
+        $message->is_from_translate = 1;
+        $message->translate_from = $data['translate_from'];
+        $message->target_language = $data['target_language'];
+        $message->body = $data['body'];
+        $message->seen = 1;
+        $message->from_id = $data['from_id'];
+        $message->to_id = $data['to_id'];
+        $message->save();
+
+        return $message;
     }
 }

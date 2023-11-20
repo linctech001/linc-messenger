@@ -1161,7 +1161,7 @@ div.loadingPlaceholder-date {
 }
 
 .message-card .actions .trans-btn {
-  display: none;
+  visibility: hidden;
   cursor: pointer;
   color: #333333;
 }
@@ -1171,7 +1171,26 @@ div.loadingPlaceholder-date {
 }
 
 .message-card:hover .actions .trans-btn {
-  display: block;
+  visibility: visible;
+}
+
+.translate {
+  background: chocolate;
+  color: bisque;
+  padding: 5px;
+  margin-bottom: 2px;
+}
+
+.translates {
+  background: blanchedalmond;
+  margin-right: 1.8em;
+}
+
+.message-card-body {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  align-items: center;
 }
 
 /*

@@ -1709,3 +1709,22 @@ function updateElementsDateToTimeAgo() {
 setInterval(() => {
   updateElementsDateToTimeAgo();
 }, 60000);
+
+transTo = function(lang, messageId) {
+  $.ajax({
+    url: url + "/messageTranslate",
+    method: "POST",
+    data: {
+      _token: csrfToken,
+      targetLanguage: lang,
+      id: messageId
+    },
+    dataType: "JSON",
+    success: (data) => {
+      console.log(data);
+    },
+    error: () => {
+      console.error("Server error, check your response");
+    },
+  });
+}

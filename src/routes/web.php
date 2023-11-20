@@ -1,4 +1,5 @@
 <?php
+
 /**
  * -----------------------------------------------------------------
  * NOTE : There is two routes has a name (user & group),
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 /*
 * This is the main app route [Chatify Messenger]
 */
+
 Route::get('/', 'MessagesController@index')->name(config('chatify.routes.prefix'));
 
 /**
@@ -96,10 +98,7 @@ Route::post('/updateSettings', 'MessagesController@updateSettings')->name('avata
  */
 Route::post('/setActiveStatus', 'MessagesController@setActiveStatus')->name('activeStatus.set');
 
-
-
-
-
+Route::post('/messageTranslate', 'MessagesController@messageTranslate')->name('api.message.translate');
 
 /*
 * [Group] view by id
