@@ -32,13 +32,13 @@ const setMessengerId = (id) => $("meta[name=id]").attr("content", id);
  */
 Pusher.logToConsole = chatify.pusher.debug;
 const pusher = new Pusher(chatify.pusher.key, {
-    encrypted: chatify.pusher.options.encrypted,
-    cluster: chatify.pusher.options.cluster,
-    wsHost: chatify.pusher.options.host,
-    wsPort: chatify.pusher.options.port,
-    wssPort: chatify.pusher.options.port,
-    forceTLS: chatify.pusher.options.useTLS,
-    authEndpoint: chatify.pusherAuthEndpoint,
+  encrypted: chatify.pusher.options.encrypted,
+  cluster: chatify.pusher.options.cluster,
+  wsHost: chatify.pusher.options.host,
+  wsPort: chatify.pusher.options.port,
+  wssPort: chatify.pusher.options.port,
+  forceTLS: chatify.pusher.options.useTLS,
+  authEndpoint: chatify.pusherAuthEndpoint,
   auth: {
     headers: {
       "X-CSRF-TOKEN": csrfToken,
@@ -1710,7 +1710,7 @@ setInterval(() => {
   updateElementsDateToTimeAgo();
 }, 60000);
 
-transTo = function(lang, messageId) {
+transTo = function (lang, messageId) {
   $.ajax({
     url: url + "/messageTranslate",
     method: "POST",
@@ -1720,8 +1720,25 @@ transTo = function(lang, messageId) {
       id: messageId
     },
     dataType: "JSON",
-    success: (data) => {
-      console.log(data);
+    beforeSend: () => {
+      let content = messagesContainer.find(
+        `.message-card[data-id=${messageId}]`
+      ).find('.message-card-content')
+      let translate = content.find(`.translate[data-language='${lang}']`);
+
+      if(translate.length > 0) {
+        content.find(`.translate`).removeClass('translate-active');
+        translate.addClass('translate-active');
+        return false;
+      } else {
+        content.append('<div class="translates"><div class="translate" data-language="' + lang + '"><i class="fas fa-sync fa-spin"></i></div></div>');
+      }
+    },
+    success: (resp) => {
+      console.log(resp, lang, messageId);
+      messagesContainer.find(
+        `.message-card[data-id=${messageId}]`
+      ).find('.message-card-content').find(`.translate[data-language='${lang}']`).html(resp.text);
     },
     error: () => {
       console.error("Server error, check your response");

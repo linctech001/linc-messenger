@@ -1184,6 +1184,8 @@ div.loadingPlaceholder-date {
 .translates {
   background: blanchedalmond;
   margin-right: 1.8em;
+  width: -webkit-fit-content;
+  margin-left: 1em;
 }
 
 .message-card-body {
@@ -1213,6 +1215,7 @@ div.loadingPlaceholder-date {
 .dropdown {
   position: relative;
   display: inline-block;
+  width: 150px;
 }
 
 .dropdown-content {
@@ -1235,4 +1238,9 @@ div.loadingPlaceholder-date {
 
 .dropdown:hover .dropdown-content {
   display: block;
+}
+
+.translate-active {
+  background-color: #0085ef;
+  color: #ffffff;
 }

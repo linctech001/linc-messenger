@@ -12,15 +12,16 @@ $timeAndSeen = "<span data-time='$created_at' class='message-time'>" . ($isSende
   @endif
   {{-- Card --}}
   <div class="message-card-content">
+    @if (@$attachment->type != 'image' || $message)
     <div class="message-card-body">
-      @if (@$attachment->type != 'image' || $message)
       <div class="message">
         {!! ($message == null && $attachment != null && @$attachment->type != 'file') ? $attachment->title : nl2br($message) !!}
         {!! $timeAndSeen !!}
         {{-- If attachment is a file --}}
         @if(@$attachment->type == 'file')
         <a href="{{ route(config('chatify.attachments.download_route_name'), ['fileName'=>$attachment->file]) }}" class="file-download">
-          <span class="fas fa-file"></span> {{$attachment->title}}</a>
+          <span class="fas fa-file"></span> {{$attachment->title}}
+        </a>
         @endif
       </div>
       @if (!empty($message) && is_string($message) && !$isSender)
@@ -45,7 +46,7 @@ $timeAndSeen = "<span data-time='$created_at' class='message-time'>" . ($isSende
     @if (!empty($translates) && is_array($translates) && !$isSender)
     <div class="translates">
       @foreach ($translates as $translate)
-      <div class="translate">
+      <div class="translate" data-language="{{ $translate['target_language'] }}">
           {!! nl2br($translate['body']) !!}
       </div>
       @endforeach
