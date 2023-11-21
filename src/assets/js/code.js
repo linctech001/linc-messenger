@@ -1605,6 +1605,14 @@ $(document).ready(function () {
   actionOnScroll(".messenger-tab.search-tab", function () {
     messengerSearch($(".messenger-search").val());
   });
+
+  $('body').on('mouseenter', '.actions.dropdown', function() {
+    console.log('hover in');
+    $(this).find('.dropdown-content').show();
+  }).on('mouseleave', '.actions.dropdown', function() {
+    console.log('hover out');
+    $(this).find('.dropdown-content').hide();
+  });
 });
 
 /**
@@ -1725,6 +1733,7 @@ transTo = function (lang, messageId) {
         `.message-card[data-id=${messageId}]`
       ).find('.message-card-content')
       let translate = content.find(`.translate[data-language='${lang}']`);
+      content.find(`.dropdown-content`).hide();
 
       if(translate.length > 0) {
         content.find(`.translate`).removeClass('translate-active');
