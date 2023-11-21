@@ -43,11 +43,11 @@ $timeAndSeen = "<span data-time='$created_at' class='message-time'>" . ($isSende
       @endif
     </div>
     @endif
-    @if (!empty($translates) && is_array($translates) && !$isSender)
+    @if (!empty($translations) && is_array($translations) && !$isSender)
     <div class="translates">
-      @foreach ($translates as $translate)
-      <div class="translate" data-language="{{ $translate['target_language'] }}">
-          {!! nl2br($translate['body']) !!}
+      @foreach ($translations as $translation)
+      <div class="translate" data-language="{{ $translation['target_language'] }}">
+          {!! nl2br($translation['body']) !!}
       </div>
       @endforeach
     </div>

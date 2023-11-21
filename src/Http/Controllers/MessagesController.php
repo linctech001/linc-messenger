@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Response;
 use App\Models\User;
 use App\Models\ChMessage as Message;
 use App\Models\ChFavorite as Favorite;
-use App\Services\OpenAIService;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -26,38 +25,9 @@ class MessagesController extends Controller
     {
         $targetLanguage = $request->input('targetLanguage', false);
         $fromMessageId = $request->input('id', false);
-        $messages = Message::where('id', $fromMessageId)->orWhere('translate_from', $fromMessageId)->get();
-    
-        foreach($messages as $message) {
-            if($message->is_from_translate != 1) {
-                $needTranslateMessage = $message->body;
-            }
-            if($message->target_language == $targetLanguage) {
-                return response()->json(['text' => $message->body, 'language' => $targetLanguage]);
-            }
-        }
+        $translated = Message::find($fromMessageId)->messageTranslate($targetLanguage);
 
-        if(!$needTranslateMessage || !$targetLanguage || !$fromMessageId) {
-            return abort(400);
-        }
-
-        $openAIService = new OpenAIService();
-        $text = $openAIService->translateText($needTranslateMessage, $targetLanguage);
-
-        try {
-            Chatify::newTranslateMessage([
-                'from_id' => $message->from_id,
-                'to_id' => $message->to_id,
-                'translate_from' => $fromMessageId,
-                'target_language' => $targetLanguage,
-                'body' => htmlentities(trim($text), ENT_QUOTES, 'UTF-8'),
-            ]);
-        } catch (\Exception $e) {
-            echo $e->getMessage();
-            return abort(500);
-        }
-    
-        return response()->json(['text' => $text, 'language' => $targetLanguage]);
+        return response()->json(['text' => $translated, 'language' => $targetLanguage]);
     }
 
     /**
@@ -218,7 +188,7 @@ class MessagesController extends Controller
      */
     public function fetch(Request $request)
     {
-        $query = Chatify::fetchMessagesQuery($request['id'])->latest();
+        $query = Chatify::fetchMessagesQuery($request['id'])->with('translations')->latest();
         $messages = $query->paginate($request->per_page ?? $this->perPage);
         $totalMessages = $messages->total();
         $lastPage = $messages->lastPage();
@@ -240,24 +210,12 @@ class MessagesController extends Controller
         }
         $allMessages = null;
 
-        $messagesWithTranslate = [];
-        foreach($messages->reverse()->toArray() as $message) {
-            if($message['is_from_translate'] != 1) {
-                $messagesWithTranslate[$message['id']] = $message;
-                continue;
-            } else {
-                $messagesWithTranslate[$message['translate_from']]['translates'][] = [
-                    'body' => $message['body'],
-                    'target_language' => $message['target_language'],
-                ];
-            }
-        }
-
-        foreach ($messagesWithTranslate as $message) {
+        foreach($messages->reverse() as $message) {
             $allMessages .= Chatify::messageCard(
                 Chatify::parseMessageWithTranslate($message)
             );
         }
+
         $response['messages'] = $allMessages;
         return Response::json($response);
     }
@@ -296,7 +254,6 @@ class MessagesController extends Controller
                     ->orWhere('ch_messages.to_id', Auth::user()->id);
             })
             ->where('users.id', '!=', Auth::user()->id)
-            ->where('ch_messages.is_from_translate', '!=', '1')
             ->select('users.*', DB::raw('MAX(ch_messages.created_at) max_created_at'))
             ->orderBy('max_created_at', 'desc')
             ->groupBy('users.id')

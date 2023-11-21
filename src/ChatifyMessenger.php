@@ -169,9 +169,7 @@ class ChatifyMessenger
         ];
     }
 
-    public function parseMessageWithTranslate(array $message): Array {
-        $msg = (object) $message;
-
+    public function parseMessageWithTranslate(Object $msg): Array {
         $attachment = null;
         $attachment_type = null;
         $attachment_title = null;
@@ -184,7 +182,6 @@ class ChatifyMessenger
             $attachment_type = in_array($ext, $this->getAllowedImages()) ? 'image' : 'file';
         }
 
-        $createAt = \Carbon\Carbon::parse($msg->created_at);
         return [
             'id' => $msg->id,
             'from_id' => $msg->from_id,
@@ -195,9 +192,9 @@ class ChatifyMessenger
                 'title' => $attachment_title,
                 'type' => $attachment_type
             ],
-            'translates' => $msg->translates ?? [],
-            'timeAgo' => $createAt->diffForHumans(),
-            'created_at' => $createAt->toIso8601String(),
+            'translations' => $msg->translations->toArray(),
+            'timeAgo' => $msg->created_at->diffForHumans(),
+            'created_at' => $msg->created_at->toIso8601String(),
             'isSender' => ($msg->from_id == Auth::user()->id),
             'seen' => $msg->seen,
         ];
@@ -274,7 +271,7 @@ class ChatifyMessenger
      */
     public function getLastMessageQuery($user_id)
     {
-        return $this->fetchMessagesQuery($user_id)->where('is_from_translate', '!=', '1')->latest()->first();
+        return $this->fetchMessagesQuery($user_id)->latest()->first();
     }
 
     /**
