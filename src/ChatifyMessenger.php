@@ -4,6 +4,7 @@ namespace Chatify;
 
 use App\Models\ChMessage as Message;
 use App\Models\ChFavorite as Favorite;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Pusher\Pusher;
 use Illuminate\Support\Facades\Auth;
@@ -323,13 +324,14 @@ class ChatifyMessenger
      */
     public function getUserWithAvatar($user)
     {
-        if ($user->avatar == 'avatar.png' && config('chatify.gravatar.enabled')) {
-            $imageSize = config('chatify.gravatar.image_size');
-            $imageset = config('chatify.gravatar.imageset');
-            $user->avatar = 'https://www.gravatar.com/avatar/' . md5(strtolower(trim($user->email))) . '?s=' . $imageSize . '&d=' . $imageset;
-        } else {
-            $user->avatar = self::getUserAvatarUrl($user->avatar);
-        }
+        // if ($user->avatar == 'avatar.png' && config('chatify.gravatar.enabled')) {
+        //     $imageSize = config('chatify.gravatar.image_size');
+        //     $imageset = config('chatify.gravatar.imageset');
+        //     $user->avatar = 'https://www.gravatar.com/avatar/' . md5(strtolower(trim($user->email))) . '?s=' . $imageSize . '&d=' . $imageset;
+        // } else {
+        //     $user->avatar = self::getUserAvatarUrl($user->avatar);
+        // }
+        $user->avatar = self::getUserAvatarUrl($user->id);
         return $user;
     }
 
@@ -460,9 +462,9 @@ class ChatifyMessenger
      * @param string $user_avatar_name
      * @return string
      */
-    public function getUserAvatarUrl($user_avatar_name)
+    public function getUserAvatarUrl(int $userId): string
     {
-        return self::storage()->url(config('chatify.user_avatar.folder') . '/' . $user_avatar_name);
+        return User::find($userId)->getProfilePhoto();
     }
 
     /**

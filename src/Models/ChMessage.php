@@ -2,16 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Services\OpenAIService;
 use Chatify\Traits\UUID;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-use App\Services\OpenAIService;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ChMessage extends Model
 {
-    use UUID, SoftDeletes;
+    use UUID;
+    use SoftDeletes;
+
+    public const FAVORITE_IN = 1;// 加入收藏
+    public const FAVORITE_OUT = 0;// 移出收藏
 
     public function translations(): HasMany
     {

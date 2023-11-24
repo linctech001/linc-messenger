@@ -19,7 +19,7 @@ $timeAndSeen = "<span data-time='$created_at' class='message-time'>" . ($isSende
         {!! $timeAndSeen !!}
         {{-- If attachment is a file --}}
         @if(@$attachment->type == 'file')
-        <a href="{{ route(config('chatify.attachments.download_route_name'), ['fileName'=>$attachment->file]) }}" class="file-download">
+        <a href="/chatify/download/{{ $attachment->file }}" class="file-download">
           <span class="fas fa-file"></span> {{$attachment->title}}
         </a>
         @endif
