@@ -431,9 +431,7 @@ class ChatifyMessenger
     public function deleteMessage($id)
     {
         try {
-            $msg = Message::where('from_id', auth()->id())->where(function($query) use ($id) {
-                $query->where('id', $id)->orWhere('translate_from', $id);
-            })->delete();
+            $msg = Message::where('from_id', auth()->id())->where('id', $id)->delete();
             // 暂时保留文件
             // if (isset($msg->attachment)) {
             //     $path = config('chatify.attachments.folder') . '/' . json_decode($msg->attachment)->new_name;

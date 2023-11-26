@@ -8,11 +8,11 @@
 <div class="app-modal" data-name="delete">
   <div class="app-modal-container">
     <div class="app-modal-card" data-name="delete" data-modal='0'>
-      <div class="app-modal-header">Are you sure you want to delete this?</div>
-      <div class="app-modal-body">You can not undo this action</div>
+      <div class="app-modal-header">{{ __('messenger.are_you_sure') }}?</div>
+      <div class="app-modal-body">{{ __('messenger.cannot_undo') }}</div>
       <div class="app-modal-footer">
-        <a href="javascript:void(0)" class="app-btn cancel">Cancel</a>
-        <a href="javascript:void(0)" class="app-btn a-btn-danger delete">Delete</a>
+        <a href="javascript:void(0)" class="app-btn cancel">{{ __('messenger.cancel') }}</a>
+        <a href="javascript:void(0)" class="app-btn a-btn-danger delete">{{ __('messenger.delete') }}</a>
       </div>
     </div>
   </div>
@@ -24,7 +24,7 @@
       <div class="app-modal-header"></div>
       <div class="app-modal-body"></div>
       <div class="app-modal-footer">
-        <a href="javascript:void(0)" class="app-btn cancel">Cancel</a>
+        <a href="javascript:void(0)" class="app-btn cancel">{{ __('messenger.cancel') }}</a>
       </div>
     </div>
   </div>
@@ -35,7 +35,7 @@
     <div class="app-modal-card" data-name="settings" data-modal='0'>
       <form id="update-settings" action="{{ route('avatar.update') }}" enctype="multipart/form-data" method="POST">
         @csrf
-        {{-- <div class="app-modal-header">Update your profile settings</div> --}}
+        {{-- <div class="app-modal-header">{{ __('messenger.update_profile_settings') }}</div> --}}
         <div class="app-modal-body">
           {{-- Udate profile avatar --}}
           <div class="avatar av-l upload-avatar-preview chatify-d-flex" style="background-image: url('{{ Auth::user()->getProfilePhoto() }}');"></div>
@@ -46,11 +46,10 @@
           </label> -->
           {{-- Dark/Light Mode  --}}
           <p class="divider"></p>
-          <p class="app-modal-header">Dark Mode <span class="
-                        {{ Auth::user()->dark_mode > 0 ? 'fas' : 'far' }} fa-moon dark-mode-switch" data-mode="{{ Auth::user()->dark_mode > 0 ? 1 : 0 }}"></span></p>
+          <p class="app-modal-header">{{ __('messenger.dark_mode') }} <span class="{{ Auth::user()->dark_mode > 0 ? 'fas' : 'far' }} fa-moon dark-mode-switch" data-mode="{{ Auth::user()->dark_mode > 0 ? 1 : 0 }}"></span></p>
           {{-- change messenger color  --}}
           <p class="divider"></p>
-          {{-- <p class="app-modal-header">Change {{ config('chatify.name') }} Color</p> --}}
+          {{-- <p class="app-modal-header">{{ __('messenger.change') }} {{ __('messenger.name_unknown') }} {{ __('messenger.color') }}</p> --}}
           <div class="update-messengerColor">
             @foreach (config('chatify.colors') as $color)
             <span style="background-color: {{ $color}}" data-color="{{$color}}" class="color-btn"></span>
@@ -61,8 +60,8 @@
           </div>
         </div>
         <div class="app-modal-footer">
-          <a href="javascript:void(0)" class="app-btn cancel">Cancel</a>
-          <input type="submit" class="app-btn a-btn-success update" value="Save Changes" />
+          <a href="javascript:void(0)" class="app-btn cancel">{{ __('messenger.cancel') }}</a>
+          <input type="submit" class="app-btn a-btn-success update" value="{{ __('messenger.save_changes') }}" />
         </div>
       </form>
     </div>

@@ -366,11 +366,11 @@ class MessagesController extends Controller
                     $file->storeAs(config('chatify.user_avatar.folder'), $avatar, config('chatify.storage_disk_name'));
                     $success = $update ? 1 : 0;
                 } else {
-                    $msg = "File extension not allowed!";
+                    $msg = __('messenger.file_extension_not_allowed');
                     $error = 1;
                 }
             } else {
-                $msg = "File size you are trying to upload is too large!";
+                $msg = __('messenger.file_too_large');
                 $error = 1;
             }
         }

@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 use App\Models\User;
 use App\Models\ChMessage as Message;
@@ -90,9 +91,15 @@ class MessagesController extends Controller
      * @param string $fileName
      * @return \Symfony\Component\HttpFoundation\StreamedResponse|void
      */
-    public function download($fileName)
+    public function download($messageId)
     {
-        $filePath = config('chatify.attachments.folder') . '/' . $fileName;
+        $fileInfo = json_decode(Message::find($messageId)->attachment);
+
+        if (!$fileInfo || empty(optional($fileInfo)->new_name) || empty(optional($fileInfo)->old_name)) {
+            return abort(404, __('messenger.file_does_not_exist'));
+        }
+
+        $filePath = config('chatify.attachments.folder') . '/' . optional($fileInfo)->new_name;
         if (Chatify::storage()->exists($filePath)) {
             // return Chatify::storage()->download($filePath);
             $file = Chatify::storage()->get($filePath);
@@ -101,12 +108,12 @@ class MessagesController extends Controller
             $fileName = pathinfo($filePath)["basename"];
             $headers = [
                 'Content-Type' => $mimeType,
-                'Content-Disposition' => 'attachment; filename="' . $fileName . '"'
+                'Content-Disposition' => 'attachment; filename="' . optional($fileInfo)->old_name . '"'
             ];
 
             return response()->make($file, 200, $headers);
         }
-        return abort(404, "Sorry, File does not exist in our server or may have been deleted!");
+        return abort(404, __('messenger.file_does_not_exist'));
     }
 
     /**
@@ -143,11 +150,11 @@ class MessagesController extends Controller
                     $file->storeAs(config('chatify.attachments.folder'), $attachment, config('chatify.storage_disk_name'));
                 } else {
                     $error->status = 1;
-                    $error->message = "File extension not allowed!";
+                    $error->message = __('messenger.file_extension_not_allowed');
                 }
             } else {
                 $error->status = 1;
-                $error->message = "File size you are trying to upload is too large!";
+                $error->message = __('messenger.file_too_large');
             }
         }
 
@@ -201,7 +208,7 @@ class MessagesController extends Controller
 
         // if there is no messages yet.
         if ($totalMessages < 1) {
-            $response['messages'] = '<p class="message-hint center-el"><span>Say \'hi\' and start messaging</span></p>';
+            $response['messages'] = '<p class="message-hint center-el"><span>' . __('messenger.say_hi') . '</span></p>';
             return Response::json($response);
         }
         if (count($messages->items()) < 1) {
@@ -267,7 +274,7 @@ class MessagesController extends Controller
                 $contacts .= Chatify::getContactItem($user);
             }
         } else {
-            $contacts = '<p class="message-hint center-el"><span>Your contact list is empty</span></p>';
+            $contacts = '<p class="message-hint center-el"><span>' . __('messenger.contact_list_empty') . '</span></p>';
         }
 
         return Response::json([
@@ -289,7 +296,7 @@ class MessagesController extends Controller
         $user = User::where('id', $request['user_id'])->first();
         if (!$user) {
             return Response::json([
-                'message' => 'User not found!',
+                'message' => __('messenger.user_not_found'),
             ], 401);
         }
         $contactItem = Chatify::getContactItem($user);
@@ -355,23 +362,49 @@ class MessagesController extends Controller
     {
         $getRecords = null;
         $input = trim(filter_var($request['input']));
-        $records = User::where('id', '!=', Auth::user()->id)
-            ->where('name', 'LIKE', "%{$input}%")
-            ->paginate($request->per_page ?? $this->perPage);
-        foreach ($records->items() as $record) {
+        // $records = User::where('id', '!=', Auth::user()->id)
+        //     ->where('name', 'LIKE', "%{$input}%")
+        //     ->paginate($request->per_page ?? $this->perPage);
+
+        $records = auth()->user()->searchChatContacts($input);
+        if ($records->count() < 1) {
+            $getRecords = '<p class="message-hint center-el"><span>' . __('messenger.nothing_to_show') . '</span></p>';
+
+            return Response::json([
+                'records' => $getRecords,
+                'total' => 0,
+                'last_page' => 0
+            ], 200);
+        }
+
+        $page = LengthAwarePaginator::resolveCurrentPage(); // 获取当前页码
+        $perPage = $request->per_page ?? $this->perPage; // 每页显示的数量
+
+        $resultsForPage = $records->forPage($page, $perPage); // 获取当前页的项目
+
+        $paginated = new LengthAwarePaginator(
+            $resultsForPage,
+            $records->count(),
+            $perPage,
+            $page,
+            ['path' => LengthAwarePaginator::resolveCurrentPath()]
+        );
+
+        foreach ($paginated->items() as $record) {
             $getRecords .= view('Chatify::layouts.listItem', [
                 'get' => 'search_item',
                 'user' => Chatify::getUserWithAvatar($record),
             ])->render();
         }
-        if ($records->total() < 1) {
-            $getRecords = '<p class="message-hint center-el"><span>Nothing to show.</span></p>';
+
+        if ($paginated->total() < 1) {
+            $getRecords = '<p class="message-hint center-el"><span>' . __('messenger.nothing_to_show') . '</span></p>';
         }
         // send the response
         return Response::json([
             'records' => $getRecords,
-            'total' => $records->total(),
-            'last_page' => $records->lastPage()
+            'total' => $paginated->total(),
+            'last_page' => $paginated->lastPage()
         ], 200);
     }
 
@@ -395,7 +428,7 @@ class MessagesController extends Controller
         }
         // send the response
         return Response::json([
-            'shared' => count($shared) > 0 ? $sharedPhotos : '<p class="message-hint"><span>Nothing shared yet</span></p>',
+            'shared' => count($shared) > 0 ? $sharedPhotos : '<p class="message-hint"><span>' . __('messenger.nothing_shared_yet') .'</span></p>',
         ], 200);
     }
 
@@ -473,11 +506,11 @@ class MessagesController extends Controller
                     $file->storeAs(config('chatify.user_avatar.folder'), $avatar, config('chatify.storage_disk_name'));
                     $success = $update ? 1 : 0;
                 } else {
-                    $msg = "File extension not allowed!";
+                    $msg = __('messenger.file_extension_not_allowed');
                     $error = 1;
                 }
             } else {
-                $msg = "File size you are trying to upload is too large!";
+                $msg = __('messenger.file_too_large');
                 $error = 1;
             }
         }

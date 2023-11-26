@@ -3,7 +3,7 @@
 <script >
     // Gloabl Chatify variables from PHP to JS
     window.chatify = {
-        name: "{{ config('chatify.name') }}",
+        name: "{{ __('messenger.name_unknown') }}",
         sounds: {!! json_encode(config('chatify.sounds')) !!},
         allowedImages: {!! json_encode(config('chatify.attachments.allowed_images')) !!},
         allowedFiles: {!! json_encode(config('chatify.attachments.allowed_files')) !!},
