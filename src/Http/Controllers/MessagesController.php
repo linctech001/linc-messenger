@@ -175,6 +175,9 @@ class MessagesController extends Controller
                     'to_id' => $request['id'],
                     'message' => Chatify::messageCard($messageData, true)
                 ]);
+
+                //站内通知
+                Chatify::sendNotification($request['id']);
             }
         }
 

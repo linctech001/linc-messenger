@@ -5,6 +5,9 @@ namespace Chatify;
 use App\Models\ChMessage as Message;
 use App\Models\ChFavorite as Favorite;
 use App\Models\User;
+
+use App\Notifications\UnreadMessageNotification;
+
 use Illuminate\Support\Facades\Storage;
 use Pusher\Pusher;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +16,23 @@ use Exception;
 class ChatifyMessenger
 {
     public $pusher;
+
+    public function sendNotification(int $toUserId): bool
+    {
+        try {
+            $notification = new UnreadMessageNotification(
+                __('messages.unread_messages', ['name' => Auth::user()->getCompanyName()]),
+                '',
+                ''
+            );
+
+            User::find($toUserId)->notify($notification);
+        } catch (Exception $e) {
+            return false;
+        }
+
+        return true;
+    }
 
     /**
      * Get max file's upload size in MB.
@@ -110,7 +130,7 @@ class ChatifyMessenger
         ]);
         // check if user authenticated
         if (Auth::check()) {
-            if($requestUser->id == $authUser->id){
+            if ($requestUser->id == $authUser->id) {
                 return $this->pusher->socket_auth(
                     $channelName,
                     $socket_id,
@@ -118,10 +138,10 @@ class ChatifyMessenger
                 );
             }
             // if not authorized
-            return response()->json(['message'=>'Unauthorized'], 401);
+            return response()->json(['message' => 'Unauthorized'], 401);
         }
         // if not authenticated
-        return response()->json(['message'=>'Not authenticated'], 403);
+        return response()->json(['message' => 'Not authenticated'], 403);
     }
 
     /**
@@ -142,7 +162,7 @@ class ChatifyMessenger
             $msg = $prefetchedMessage;
         } else {
             $msg = Message::where('id', $id)->first();
-            if(!$msg){
+            if (!$msg) {
                 return [];
             }
         }
@@ -170,7 +190,8 @@ class ChatifyMessenger
         ];
     }
 
-    public function parseMessageWithTranslate(Object $msg): Array {
+    public function parseMessageWithTranslate(Object $msg): array
+    {
         $attachment = null;
         $attachment_type = null;
         $attachment_title = null;
@@ -213,7 +234,7 @@ class ChatifyMessenger
         if (!$data) {
             return '';
         }
-        if($renderDefaultCard) {
+        if ($renderDefaultCard) {
             $data['isSender'] =  false;
         }
         return view('Chatify::layouts.messageCard', $data)->render();
@@ -228,7 +249,7 @@ class ChatifyMessenger
     public function fetchMessagesQuery($user_id)
     {
         return Message::where('from_id', Auth::user()->id)->where('to_id', $user_id)
-                    ->orWhere('from_id', $user_id)->where('to_id', Auth::user()->id);
+            ->orWhere('from_id', $user_id)->where('to_id', Auth::user()->id);
     }
 
     /**
@@ -258,9 +279,9 @@ class ChatifyMessenger
     public function makeSeen($user_id)
     {
         Message::Where('from_id', $user_id)
-                ->where('to_id', Auth::user()->id)
-                ->where('seen', 0)
-                ->update(['seen' => 1]);
+            ->where('to_id', Auth::user()->id)
+            ->where('seen', 0)
+            ->update(['seen' => 1]);
         return 1;
     }
 
@@ -310,7 +331,7 @@ class ChatifyMessenger
                 'user' => $this->getUserWithAvatar($user),
                 'lastMessage' => $lastMessage,
                 'unseenCounter' => $unseenCounter,
-                ])->render();
+            ])->render();
         } catch (\Throwable $th) {
             throw new Exception($th->getMessage());
         }
@@ -332,6 +353,7 @@ class ChatifyMessenger
         //     $user->avatar = self::getUserAvatarUrl($user->avatar);
         // }
         $user->avatar = self::getUserAvatarUrl($user->id);
+        $user->name = self::getMessengerName($user->id);
         return $user;
     }
 
@@ -344,8 +366,8 @@ class ChatifyMessenger
     public function inFavorite($user_id)
     {
         return Favorite::where('user_id', Auth::user()->id)
-                        ->where('favorite_id', $user_id)->count() > 0
-                        ? true : false;
+            ->where('favorite_id', $user_id)->count() > 0
+            ? true : false;
     }
 
     /**
@@ -389,7 +411,7 @@ class ChatifyMessenger
                     $attachment = json_decode($msg->attachment);
                     // determine the type of the attachment
                     in_array(pathinfo($attachment->new_name, PATHINFO_EXTENSION), $this->getAllowedImages())
-                    ? array_push($images, $attachment->new_name) : '';
+                        ? array_push($images, $attachment->new_name) : '';
                 }
             }
         }
@@ -408,7 +430,7 @@ class ChatifyMessenger
             foreach ($this->fetchMessagesQuery($user_id)->get() as $msg) {
                 // delete file attached if exist
                 if (isset($msg->attachment)) {
-                    $path = config('chatify.attachments.folder').'/'.json_decode($msg->attachment)->new_name;
+                    $path = config('chatify.attachments.folder') . '/' . json_decode($msg->attachment)->new_name;
                     if (self::storage()->exists($path)) {
                         self::storage()->delete($path);
                     }
@@ -463,6 +485,12 @@ class ChatifyMessenger
     public function getUserAvatarUrl(int $userId): string
     {
         return User::find($userId)->getProfilePhoto();
+    }
+
+    public function getMessengerName(int $userId): string
+    {
+        $user = User::find($userId);
+        return $user->name . ' @ ' . $user->getCompanyName();
     }
 
     /**
