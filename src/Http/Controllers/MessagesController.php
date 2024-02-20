@@ -177,7 +177,7 @@ class MessagesController extends Controller
                 ]);
 
                 //站内通知
-                Chatify::sendNotification($request['id']);
+                Chatify::sendNotification($request['id'], $message);
             }
         }
 

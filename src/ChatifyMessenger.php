@@ -17,7 +17,7 @@ class ChatifyMessenger
 {
     public $pusher;
 
-    public function sendNotification(int $toUserId): bool
+    public function sendNotification(int $toUserId, $message): bool
     {
         try {
             $notification = new UnreadMessageNotification(
@@ -25,8 +25,9 @@ class ChatifyMessenger
                 '',
                 ''
             );
-
             User::find($toUserId)->notify($notification);
+            $message->notification_id = $notification->id;
+            $message->save();
         } catch (Exception $e) {
             return false;
         }
