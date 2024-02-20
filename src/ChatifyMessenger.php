@@ -23,11 +23,10 @@ class ChatifyMessenger
             $notification = new UnreadMessageNotification(
                 __('messages.unread_messages', ['name' => Auth::user()->getCompanyName()]),
                 '',
-                ''
+                '',
+                $message->id
             );
             User::find($toUserId)->notify($notification);
-            $message->notification_id = $notification->id;
-            $message->save();
         } catch (Exception $e) {
             return false;
         }
