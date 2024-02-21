@@ -278,10 +278,19 @@ class ChatifyMessenger
      */
     public function makeSeen($user_id)
     {
-        Message::Where('from_id', $user_id)
+        // Message::Where('from_id', $user_id)
+        //     ->where('to_id', Auth::user()->id)
+        //     ->where('seen', 0)
+        //     ->update(['seen' => 1]);
+        $messages = Message::where('from_id', $user_id)
             ->where('to_id', Auth::user()->id)
             ->where('seen', 0)
-            ->update(['seen' => 1]);
+            ->get();
+    
+        foreach ($messages as $message) {
+            $message->seen = 1;
+            $message->save(); // 这会触发模型事件
+        }
         return 1;
     }
 
